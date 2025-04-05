@@ -17,19 +17,39 @@ const Search = () => {
   const [saveResults, setSaveResults] = useState(false);
   const [status, setStatus] = useState('');
 
-  // 加载向量数据库providers和collections
+  // 添加默认的 providers 配置
+  const defaultProviders = [
+    { id: 'chroma', name: 'Chroma' },
+    { id: 'milvus', name: 'Milvus' },
+    { id: 'pinecone', name: 'Pinecone' },
+    { id: 'qdrant', name: 'Qdrant' },
+    { id: 'weaviate', name: 'Weaviate' },
+    { id: 'faiss', name: 'FAISS' }
+  ];
+
+  // 修改 useEffect
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 获取providers列表
-        const providersResponse = await fetch(`${apiBaseUrl}/providers`);
-        const providersData = await providersResponse.json();
-        setProviders(providersData.providers);
+        // 首先设置默认的 providers
+        let availableProviders = defaultProviders;
+        
+        // 如果是 Windows 系统，过滤掉 Milvus
+        if (navigator.platform.includes('Win')) {
+          availableProviders = defaultProviders.filter(provider => provider.id !== 'milvus');
+          // 如果当前选择的是 milvus 且在 Windows 系统下，自动切换到 chroma
+          if (selectedProvider === 'milvus') {
+            setSelectedProvider('chroma');
+            return; // 重要：这里返回，让状态更新后的 useEffect 重新运行
+          }
+        }
+        
+        setProviders(availableProviders);
 
         // 获取collections列表
         const collectionsResponse = await fetch(`${apiBaseUrl}/collections?provider=${selectedProvider}`);
         const collectionsData = await collectionsResponse.json();
-        setCollections(collectionsData.collections);
+        setCollections(collectionsData.collections || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
@@ -37,6 +57,16 @@ const Search = () => {
 
     fetchData();
   }, [selectedProvider]);
+
+  // 添加一个初始化的 useEffect
+  useEffect(() => {
+    // 设置初始 provider
+    if (navigator.platform.includes('Win')) {
+      setSelectedProvider('chroma');
+    } else {
+      setSelectedProvider('milvus');
+    }
+  }, []); // 空依赖数组，只在组件挂载时运行一次
 
   const handleSearch = async () => {
     if (!query || !collection) {
@@ -48,10 +78,11 @@ const Search = () => {
     setStatus('');
     try {
       const searchParams = {
-        query,
+        query: query,
         collection_id: collection,
+        provider: selectedProvider,
         top_k: topK,
-        threshold,
+        threshold: threshold,
         word_count_threshold: wordCountThreshold,
         save_results: saveResults
       };

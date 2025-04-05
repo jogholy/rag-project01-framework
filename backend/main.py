@@ -290,27 +290,31 @@ async def get_collections(provider: str):
 async def search(
     query: str = Body(...),
     collection_id: str = Body(...),
+    provider: str = Body(...),
     top_k: int = Body(3),
     threshold: float = Body(0.7),
-    word_count_threshold: int = Body(100)
+    word_count_threshold: int = Body(100),
+    save_results: bool = Body(False)
 ):
     """执行向量搜索"""
     try:
         # Log the incoming search request details
-        logger.info(f"Search request - Query: {query}, Collection: {collection_id}, Top K: {top_k}, Threshold: {threshold}, Word Count Threshold: {word_count_threshold}")
+        logger.info(f"Search request - Query: {query}, Collection: {collection_id}, Provider: {provider}, Top K: {top_k}, Threshold: {threshold}, Word Count Threshold: {word_count_threshold}")
         
         search_service = SearchService()
         
         # Log before calling the search function
         logger.info("Calling search service...")
         
-        results = await search_service.search(
-            query=query,
-            collection_id=collection_id,
-            top_k=top_k,
-            threshold=threshold,
-            word_count_threshold=word_count_threshold
-        )
+        results = await search_service.search({
+            "query": query,
+            "collection_id": collection_id,
+            "provider": provider,
+            "top_k": top_k,
+            "threshold": threshold,
+            "word_count_threshold": word_count_threshold,
+            "save_results": save_results
+        })
         
         # Log the search results
         logger.info(f"Search response: {results}")

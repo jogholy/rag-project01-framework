@@ -1,0 +1,129 @@
+{
+  "filename": "自己动手制作RAG框架.pdf",
+  "total_chunks": 13,
+  "total_pages": 14,
+  "loading_method": "pymupdf",
+  "loading_strategy": null,
+  "chunking_strategy": null,
+  "chunking_method": "loaded",
+  "timestamp": "2025-04-05T20:10:36.346332",
+  "chunks": [
+    {
+      "content": "黄佳\n新加坡科研局资深AI工程师\n大模型RAG进阶实战营– 案例篇\n01 自己动手制作RAG框架",
+      "metadata": {
+        "chunk_id": 1,
+        "page_number": 1,
+        "page_range": "1",
+        "word_count": 6
+      }
+    },
+    {
+      "content": "下载并运行框架",
+      "metadata": {
+        "chunk_id": 2,
+        "page_number": 3,
+        "page_range": "3",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "下载框架Repo\nhttps://github.com/huangjia2019/rag-project01-framework\ngit clone https://github.com/huangjia2019/rag-project01-\nframework.git",
+      "metadata": {
+        "chunk_id": 3,
+        "page_number": 4,
+        "page_range": "4",
+        "word_count": 6
+      }
+    },
+    {
+      "content": "安装Node.js (Ubuntu)\n1. 先进入frontend目录\n2. npm install\nnpm -v\nsudo apt update \nsudo apt install nodejs npm -y\n检查\n1\n2\n安装\n3\n安装前端组件",
+      "metadata": {
+        "chunk_id": 4,
+        "page_number": 5,
+        "page_range": "5",
+        "word_count": 24
+      }
+    },
+    {
+      "content": "安装Node.js (Windows)\nhttps://nodejs.org/zh-cn\n1. 先进入frontend目录\n2. npm install",
+      "metadata": {
+        "chunk_id": 5,
+        "page_number": 6,
+        "page_range": "6",
+        "word_count": 8
+      }
+    },
+    {
+      "content": "运行前端\nnpm run dev",
+      "metadata": {
+        "chunk_id": 6,
+        "page_number": 7,
+        "page_range": "7",
+        "word_count": 4
+      }
+    },
+    {
+      "content": "安装环境（后端）\n3. pip install -r requirements.txt\n1. python -m venv Project01\n2. source …/bin/activate",
+      "metadata": {
+        "chunk_id": 7,
+        "page_number": 8,
+        "page_range": "8",
+        "word_count": 14
+      }
+    },
+    {
+      "content": "运行后端\nuvicorn main:app --reload --port 8001\n安装好相关Python环境\n1\n2",
+      "metadata": {
+        "chunk_id": 8,
+        "page_number": 9,
+        "page_range": "9",
+        "word_count": 9
+      }
+    },
+    {
+      "content": "框架设计和流程说明（前端）",
+      "metadata": {
+        "chunk_id": 9,
+        "page_number": 10,
+        "page_range": "10",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "框架设计和流程说明（后端）",
+      "metadata": {
+        "chunk_id": 10,
+        "page_number": 11,
+        "page_range": "11",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "为框架添加新功能",
+      "metadata": {
+        "chunk_id": 11,
+        "page_number": 12,
+        "page_range": "12",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "新增加一个向量数据库：Chroma\nhttps://github.com/chroma-core/chroma",
+      "metadata": {
+        "chunk_id": 12,
+        "page_number": 13,
+        "page_range": "13",
+        "word_count": 2
+      }
+    },
+    {
+      "content": "从头开始构建框架",
+      "metadata": {
+        "chunk_id": 13,
+        "page_number": 14,
+        "page_range": "14",
+        "word_count": 1
+      }
+    }
+  ]
+}

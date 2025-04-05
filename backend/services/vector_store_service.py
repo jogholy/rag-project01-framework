@@ -95,7 +95,8 @@ class VectorStoreService:
         except Exception as e:
             logger.error(f"Error initializing Chroma client: {str(e)}")
             self.chroma_client = None
-    
+        self.chroma_collections = {}
+
     def _get_milvus_index_type(self, config: VectorDBConfig) -> str:
         """
         从配置对象获取Milvus索引类型
@@ -377,7 +378,11 @@ class VectorStoreService:
                 collection = self.chroma_client.create_collection(
                     name=collection_name,
                     embedding_function=None,  # 使用原始向量
-                    metadata={"dimension": vector_dim}
+                    metadata={
+                        "dimension": vector_dim,
+                        "embedding_model": embeddings_data.get("embedding_model", "deepseek-ai/deepseek-base-embedding"),
+                        "embedding_provider": embeddings_data.get("embedding_provider", "huggingface")
+                    }
                 )
                 logger.info("Collection created successfully")
             except Exception as e:
@@ -412,6 +417,20 @@ class VectorStoreService:
                     
                     total_processed += len(batch)
                     logger.info(f"Processed {total_processed}/{len(embeddings_data['embeddings'])} vectors")
+
+                # 创建集合后，保存映射关系
+                collection_mapping_file = os.path.join("03-vector-store", "collection_mapping.json")
+                original_filename = embeddings_data.get("filename", "")
+                
+                mapping = {}
+                if os.path.exists(collection_mapping_file):
+                    with open(collection_mapping_file, 'r') as f:
+                        mapping = json.load(f)
+                
+                mapping[original_filename] = collection_name
+                
+                with open(collection_mapping_file, 'w') as f:
+                    json.dump(mapping, f, indent=2)
 
                 return {
                     "index_size": total_processed,
@@ -579,3 +598,169 @@ class VectorStoreService:
                 logger.error(f"Error getting Chroma collection info: {str(e)}")
                 return {}
         return {}
+
+    def init_chroma(self):
+        """初始化 Chroma 客户端"""
+        import chromadb
+        self.chroma_client = chromadb.PersistentClient(path="./data/chroma_db")
+        
+    def get_collections(self, provider: str) -> List[Dict]:
+        """获取指定provider的所有集合信息"""
+        try:
+            if provider == "milvus":
+                return self._get_milvus_collections()
+            elif provider == "chroma":
+                return self._get_chroma_collections()
+            # ... other providers ...
+            else:
+                return []
+        except Exception as e:
+            logger.error(f"Error getting collections for {provider}: {str(e)}")
+            return []
+
+    def _get_chroma_collections(self) -> List[Dict]:
+        """获取 Chroma 数据库中的集合信息"""
+        try:
+            if not self.chroma_client:
+                self.init_chroma()
+            
+            collections = []
+            for collection in self.chroma_client.list_collections():
+                chroma_collection = self.chroma_client.get_collection(collection)
+                count = chroma_collection.count()
+                collections.append({
+                    "id": collection,  # 使用集合名称作为ID
+                    "name": collection,
+                    "count": count,
+                    "provider": "chroma"
+                })
+            return collections
+        except Exception as e:
+            logger.error(f"Error getting Chroma collections: {str(e)}")
+            return []
+
+    def _get_milvus_collections(self) -> List[Dict]:
+        """获取 Milvus 数据库中的集合信息"""
+        # ... existing milvus collection code ...
+
+    async def search(self, search_params: Dict) -> Dict:
+        """执行向量搜索"""
+        try:
+            provider = search_params.get("provider")
+            collection_id = search_params.get("collection_id")
+            query = search_params.get("query")
+            top_k = search_params.get("top_k", 3)
+            threshold = search_params.get("threshold", 0.7)
+            
+            if provider == "chroma":
+                return await self._search_chroma(search_params)
+            elif provider == "milvus":
+                return await self._search_milvus(search_params)
+            else:
+                raise ValueError(f"Unsupported vector database provider: {provider}")
+                
+        except Exception as e:
+            logger.error(f"Search error: {str(e)}")
+            raise
+
+    async def _search_chroma(self, params: Dict) -> Dict:
+        """在 Chroma 中执行搜索"""
+        try:
+            if not self.chroma_client:
+                self.init_chroma()
+
+            collection_name = params.get("collection_id")
+            query = params.get("query")
+            top_k = params.get("top_k", 3)
+            threshold = params.get("threshold", 0.7)
+
+            # 参数验证
+            if not collection_name:
+                raise ValueError("Missing collection_id parameter")
+            if not query:
+                raise ValueError("Missing query parameter")
+
+            logger.info(f"Searching in collection: {collection_name}")
+            
+            # 获取集合
+            collection = self.chroma_client.get_collection(
+                name=collection_name,
+                embedding_function=None  # 使用原始向量
+            )
+            
+            # 从集合的 metadata 中获取 embedding 配置
+            collection_metadata = collection.metadata
+            if not collection_metadata:
+                raise ValueError(f"No metadata found for collection: {collection_name}")
+            
+            provider = collection_metadata.get("embedding_provider")
+            model_name = collection_metadata.get("embedding_model")
+            
+            if not provider or not model_name:
+                raise ValueError(f"Missing embedding configuration in collection metadata: {collection_metadata}")
+            
+            logger.info(f"Using embedding config from collection: provider={provider}, model={model_name}")
+            
+            # 使用 EmbeddingService 生成查询向量
+            from services.embedding_service import EmbeddingService, EmbeddingConfig
+            embedding_service = EmbeddingService()
+            
+            # 使用集合中存储的配置
+            config = EmbeddingConfig(
+                provider=provider,
+                model_name=model_name
+            )
+            
+            # 准备查询数据
+            input_data = {
+                "chunks": [{
+                    "content": query,
+                    "metadata": {
+                        "chunk_id": 0,
+                        "page_number": "0",
+                        "page_range": "",
+                        "word_count": len(query.split())
+                    }
+                }]
+            }
+            
+            # 生成查询向量
+            embeddings, _ = embedding_service.create_embeddings(input_data, config)
+            query_embedding = embeddings[0]["embedding"] if embeddings else None
+            
+            if not query_embedding:
+                raise ValueError("Failed to generate query embedding")
+            
+            # 使用向量查询
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=top_k
+            )
+
+            # 格式化搜索结果
+            formatted_results = []
+            for idx, (text, metadata, distance) in enumerate(zip(
+                results.get("documents", [[]])[0],
+                results.get("metadatas", [[]])[0],
+                results.get("distances", [[]])[0]
+            )):
+                score = 1.0 - (distance / 2.0)
+                if score >= threshold:
+                    formatted_results.append({
+                        "text": text,
+                        "metadata": metadata,
+                        "score": score
+                    })
+
+            logger.info(f"Found {len(formatted_results)} results above threshold")
+            return {
+                "results": formatted_results,
+                "total": len(formatted_results)
+            }
+
+        except Exception as e:
+            logger.error(f"Chroma search error: {str(e)}")
+            logger.error(f"Search parameters: {params}")
+            raise
+
+    # ... existing code ...
