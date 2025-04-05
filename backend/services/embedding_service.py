@@ -5,7 +5,8 @@ import json
 from datetime import datetime
 from enum import Enum
 import boto3
-from langchain_community.embeddings import BedrockEmbeddings, OpenAIEmbeddings, HuggingFaceEmbeddings
+from langchain_community.embeddings import BedrockEmbeddings, OpenAIEmbeddings
+from langchain_community.embeddings.huggingface import HuggingFaceEmbeddings
 
 class EmbeddingProvider(str, Enum):
     """
@@ -273,8 +274,16 @@ class EmbeddingFactory:
             )
             
         elif config.provider == EmbeddingProvider.HUGGINGFACE:
-            return HuggingFaceEmbeddings(
-                model_name=config.model_name
-            )
+            if config.model_name == 'BAAI/bge-base-zh-v1.5':
+                return HuggingFaceEmbeddings(
+                    model_name=config.model_name,
+                    model_kwargs={'device': 'cpu'},  # 如果有GPU可以改为'cuda'
+                    encode_kwargs={'normalize_embeddings': True}  # 在encode_kwargs中设置normalize_embeddings
+                )
+            else:
+                # 其他huggingface模型使用默认配置
+                return HuggingFaceEmbeddings(
+                    model_name=config.model_name
+                )
             
         raise ValueError(f"Unsupported embedding provider: {config.provider}")
