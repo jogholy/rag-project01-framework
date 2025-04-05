@@ -16,6 +16,7 @@ import pandas as pd
 from pathlib import Path
 from services.generation_service import GenerationService
 from typing import List, Dict, Optional
+from pydantic import BaseModel
 
 # 设置日志
 logging.basicConfig(level=logging.INFO)
@@ -37,6 +38,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 添加 IndexRequest 模型定义
+class IndexRequest(BaseModel):
+    file_id: str
+    vector_db: str
+    index_mode: str
 
 @app.post("/process")
 async def process_file(
@@ -240,30 +247,19 @@ async def list_embedded_docs():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/index")
-async def index_embeddings(data: dict):
+async def index_embeddings(request: IndexRequest):
     try:
-        file_id = data.get("fileId")
-        vector_db = data.get("vectorDb")
-        index_mode = data.get("indexMode")
+        file_path = os.path.join("02-embedded-docs", request.file_id)
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="File not found")
         
-        if not all([file_id, vector_db, index_mode]):
-            raise ValueError("Missing required fields")
-            
-        embedding_file = os.path.join("02-embedded-docs", file_id)
-        if not os.path.exists(embedding_file):
-            raise FileNotFoundError(f"Embedding file not found: {file_id}")
-            
-        config = VectorDBConfig(provider=vector_db, index_mode=index_mode)
+        config = VectorDBConfig(request.vector_db, request.index_mode)
         vector_store_service = VectorStoreService()
-        result = vector_store_service.index_embeddings(embedding_file, config)
-        
+        result = vector_store_service.index_embeddings(file_path, config)
         return result
     except Exception as e:
-        logger.error(f"Error during indexing: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        logger.exception(f"Error during indexing: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/providers")
 async def get_providers():
@@ -280,20 +276,15 @@ async def get_providers():
         )
 
 @app.get("/collections")
-async def get_collections(
-    provider: VectorDBProvider = Query(default=VectorDBProvider.MILVUS)
-):
-    """获取指定向量数据库中的集合"""
+async def get_collections(provider: str):
     try:
-        search_service = SearchService()
-        collections = search_service.list_collections(provider.value)
+        service = VectorStoreService()
+        collections = service.list_collections(provider)
         return {"collections": collections}
     except Exception as e:
         logger.error(f"Error getting collections: {str(e)}")
-        raise HTTPException(
-            status_code=500,
-            detail=str(e)
-        )
+        # 返回空列表而不是错误
+        return {"collections": []}
 
 @app.post("/search")
 async def search(

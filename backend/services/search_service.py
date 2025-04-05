@@ -6,6 +6,7 @@ from services.embedding_service import EmbeddingService
 from utils.config import VectorDBProvider, MILVUS_CONFIG
 import os
 import json
+from services.vector_store_service import VectorStoreService
 
 logger = logging.getLogger(__name__)
 
@@ -35,46 +36,16 @@ class SearchService:
             {"id": VectorDBProvider.MILVUS.value, "name": "Milvus"}
         ]
 
-    def list_collections(self, provider: str = VectorDBProvider.MILVUS.value) -> List[Dict[str, Any]]:
+    def list_collections(self, provider: str) -> List[Dict[str, Any]]:
         """
-        获取指定向量数据库中的所有集合
-        
-        Args:
-            provider (str): 向量数据库提供商，默认为Milvus
-            
-        Returns:
-            List[Dict[str, Any]]: 集合信息列表，包含id、名称和实体数量
-            
-        Raises:
-            Exception: 连接或查询集合时发生错误
+        列出指定提供商的所有集合
         """
         try:
-            connections.connect(
-                alias="default",
-                uri=self.milvus_uri
-            )
-            
-            collections = []
-            collection_names = utility.list_collections()
-            
-            for name in collection_names:
-                try:
-                    collection = Collection(name)
-                    collections.append({
-                        "id": name,
-                        "name": name,
-                        "count": collection.num_entities
-                    })
-                except Exception as e:
-                    logger.error(f"Error getting info for collection {name}: {str(e)}")
-            
-            return collections
-            
+            vector_store = VectorStoreService()
+            return vector_store.list_collections(provider)
         except Exception as e:
             logger.error(f"Error listing collections: {str(e)}")
-            raise
-        finally:
-            connections.disconnect("default")
+            return []
 
     def save_search_results(self, query: str, collection_id: str, results: List[Dict[str, Any]]) -> str:
         """

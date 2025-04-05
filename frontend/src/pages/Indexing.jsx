@@ -5,8 +5,8 @@ import { apiBaseUrl } from '../config/config';
 
 const Indexing = () => {
   const [embeddingFile, setEmbeddingFile] = useState('');
-  const [vectorDb, setVectorDb] = useState('milvus');
-  const [indexMode, setIndexMode] = useState('standard');
+  const [vectorDb, setVectorDb] = useState('chroma');
+  const [indexMode, setIndexMode] = useState('hnsw');
   const [status, setStatus] = useState('');
   const [embeddedFiles, setEmbeddedFiles] = useState([]);
   const [indexingResult, setIndexingResult] = useState(null);
@@ -14,7 +14,7 @@ const Indexing = () => {
   const [selectedCollection, setSelectedCollection] = useState('');
   const [collectionDetails, setCollectionDetails] = useState(null);
   const [providers, setProviders] = useState([]);
-  const [selectedProvider, setSelectedProvider] = useState('milvus');
+  const [selectedProvider, setSelectedProvider] = useState('chroma');
 
   // 数据库和索引模式的配置
   const dbConfigs = {
@@ -31,12 +31,22 @@ const Indexing = () => {
       modes: ['hnsw', 'flat']
     },
     chroma: {
-      modes: ['hnsw', 'standard']
+      modes: ['hnsw']  // Chroma 主要支持 HNSW 索引
     },
     faiss: {
       modes: ['flat', 'ivf', 'hnsw']
     }
   };
+
+  // 添加默认的 providers 配置
+  const defaultProviders = [
+    { id: 'chroma', name: 'Chroma' },
+    { id: 'milvus', name: 'Milvus' },
+    { id: 'pinecone', name: 'Pinecone' },
+    { id: 'qdrant', name: 'Qdrant' },
+    { id: 'weaviate', name: 'Weaviate' },
+    { id: 'faiss', name: 'FAISS' }
+  ];
 
   useEffect(() => {
     fetchEmbeddedFiles();
@@ -51,21 +61,38 @@ const Indexing = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // 获取providers列表
-        const providersResponse = await fetch(`${apiBaseUrl}/providers`);
-        const providersData = await providersResponse.json();
-        setProviders(providersData.providers);
+        // 首先设置默认的 providers
+        let availableProviders = defaultProviders;
+        
+        // 如果是 Windows 系统，过滤掉 Milvus
+        if (navigator.platform.includes('Win')) {
+          availableProviders = defaultProviders.filter(provider => provider.id !== 'milvus');
+        }
+        
+        setProviders(availableProviders);
+        
+        // 如果当前选择的是 milvus 且在 Windows 系统下，自动切换到 chroma
+        if (navigator.platform.includes('Win') && selectedProvider === 'milvus') {
+          setSelectedProvider('chroma');
+          setVectorDb('chroma');
+          setIndexMode(dbConfigs['chroma'].modes[0]);
+        }
 
         // 获取collections列表
         const collectionsResponse = await fetch(`${apiBaseUrl}/collections?provider=${selectedProvider}`);
         const collectionsData = await collectionsResponse.json();
-        setCollections(collectionsData.collections);
+        setCollections(collectionsData.collections || []);
       } catch (error) {
         console.error('Error fetching data:', error);
       }
     };
 
     fetchData();
+  }, [selectedProvider]);
+
+  // 添加一个新的 useEffect 来同步 selectedProvider 和 vectorDb
+  useEffect(() => {
+    setVectorDb(selectedProvider);
   }, [selectedProvider]);
 
   const fetchEmbeddedFiles = async () => {
@@ -87,11 +114,20 @@ const Indexing = () => {
 
   const fetchCollections = async () => {
     try {
-      const response = await fetch(`${apiBaseUrl}/collections/${vectorDb}`);
+      const response = await fetch(`${apiBaseUrl}/collections?provider=${selectedProvider}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch collections');
+      }
       const data = await response.json();
-      setCollections(data.collections || []);
+      if (Array.isArray(data.collections)) {
+        setCollections(data.collections);
+      } else {
+        console.error('Invalid collections data:', data);
+        setCollections([]);
+      }
     } catch (error) {
       console.error('Error fetching collections:', error);
+      setCollections([]);
     }
   };
 
@@ -109,15 +145,23 @@ const Indexing = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          fileId: embeddingFile,
-          vectorDb,
-          indexMode
+          file_id: embeddingFile,
+          vector_db: vectorDb,
+          index_mode: indexMode
         }),
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Indexing failed');
+      }
       
       const data = await response.json();
       setIndexingResult(data);
       setStatus('Indexing completed successfully');
+      
+      // 刷新集合列表
+      fetchCollections();
     } catch (error) {
       console.error('Error indexing:', error);
       setStatus('Error during indexing: ' + error.message);
@@ -174,6 +218,14 @@ const Indexing = () => {
     }
   };
 
+  // 修改 Vector Database Selection 的 onChange 处理
+  const handleProviderChange = (e) => {
+    const newProvider = e.target.value;
+    setSelectedProvider(newProvider);
+    setVectorDb(newProvider);
+    setIndexMode(dbConfigs[newProvider].modes[0]);
+  };
+
   return (
     <div className="p-6">
       <h2 className="text-2xl font-bold mb-6">Vector Database Indexing</h2>
@@ -204,7 +256,7 @@ const Indexing = () => {
               <label className="block text-sm font-medium mb-1">Vector Database</label>
               <select
                 value={selectedProvider}
-                onChange={(e) => setSelectedProvider(e.target.value)}
+                onChange={handleProviderChange}
                 className="block w-full p-2 border rounded"
               >
                 {providers.map(provider => (

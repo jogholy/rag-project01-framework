@@ -6,9 +6,25 @@ import logging
 from pathlib import Path
 from pymilvus import connections, utility
 from pymilvus import Collection, DataType, FieldSchema, CollectionSchema
+import chromadb
+from chromadb.config import Settings
 from utils.config import VectorDBProvider, MILVUS_CONFIG  # Updated import
+import warnings
+import sys
+import re
 
+# 配置日志
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)
+
+# 忽略 pydantic 的警告
+warnings.filterwarnings("ignore", category=UserWarning, module="pydantic")
 
 class VectorDBConfig:
     """
@@ -25,6 +41,8 @@ class VectorDBConfig:
         self.provider = provider
         self.index_mode = index_mode
         self.milvus_uri = MILVUS_CONFIG["uri"]
+        # 修改 Chroma 配置路径
+        self.chroma_persist_directory = os.path.join("03-vector-store", "chroma_db")
 
     def _get_milvus_index_type(self, index_mode: str) -> str:
         """
@@ -61,6 +79,22 @@ class VectorStoreService:
         self.initialized_dbs = {}
         # 确保存储目录存在
         os.makedirs("03-vector-store", exist_ok=True)
+        
+        # 修改 Chroma 客户端初始化
+        try:
+            chroma_persist_dir = os.path.join("03-vector-store", "chroma_db")
+            os.makedirs(chroma_persist_dir, exist_ok=True)
+            self.chroma_client = chromadb.PersistentClient(
+                path=chroma_persist_dir,
+                settings=Settings(
+                    anonymized_telemetry=False,
+                    allow_reset=True
+                )
+            )
+            logger.info("Successfully initialized Chroma client")
+        except Exception as e:
+            logger.error(f"Error initializing Chroma client: {str(e)}")
+            self.chroma_client = None
     
     def _get_milvus_index_type(self, config: VectorDBConfig) -> str:
         """
@@ -99,24 +133,32 @@ class VectorStoreService:
         """
         start_time = datetime.now()
         
-        # 读取embedding文件
-        embeddings_data = self._load_embeddings(embedding_file)
-        
-        # 根据不同的数据库进行索引
-        if config.provider == VectorDBProvider.MILVUS:
-            result = self._index_to_milvus(embeddings_data, config)
-        
-        end_time = datetime.now()
-        processing_time = (end_time - start_time).total_seconds()
-        
-        return {
-            "database": config.provider,
-            "index_mode": config.index_mode,
-            "total_vectors": len(embeddings_data["embeddings"]),
-            "index_size": result.get("index_size", "N/A"),
-            "processing_time": processing_time,
-            "collection_name": result.get("collection_name", "N/A")
-        }
+        try:
+            # 读取embedding文件
+            embeddings_data = self._load_embeddings(embedding_file)
+            
+            # 根据不同的数据库进行索引
+            if config.provider.lower() == "milvus":  # 使用字符串比较而不是枚举
+                result = self._index_to_milvus(embeddings_data, config)
+            elif config.provider.lower() == "chroma":  # 使用字符串比较而不是枚举
+                result = self._index_to_chroma(embeddings_data, config)
+            else:
+                raise ValueError(f"Unsupported vector database provider: {config.provider}")
+            
+            end_time = datetime.now()
+            processing_time = (end_time - start_time).total_seconds()
+            
+            return {
+                "database": config.provider,
+                "index_mode": config.index_mode,
+                "total_vectors": len(embeddings_data["embeddings"]),
+                "index_size": result.get("index_size", "N/A"),
+                "processing_time": processing_time,
+                "collection_name": result.get("collection_name", "N/A")
+            }
+        except Exception as e:
+            logger.exception(f"Error in index_embeddings: {str(e)}")
+            raise
     
     def _load_embeddings(self, file_path: str) -> Dict[str, Any]:
         """
@@ -284,24 +326,193 @@ class VectorStoreService:
         finally:
             connections.disconnect("default")
 
-    def list_collections(self, provider: str) -> List[str]:
+    def _index_to_chroma(self, embeddings_data: Dict[str, Any], config: VectorDBConfig) -> Dict[str, Any]:
+        """
+        将嵌入向量索引到 Chroma 数据库
+        """
+        if self.chroma_client is None:
+            logger.error("Chroma client not initialized")
+            raise RuntimeError("Chroma client not initialized")
+
+        try:
+            # 处理文件名，移除中文字符和其他非法字符
+            filename = embeddings_data.get("filename", "")
+            # 移除 .pdf 后缀
+            base_name = filename.replace('.pdf', '')
+            
+            # 将中文文件名转换为拼音或仅保留英文数字
+            # 只保留字母、数字、下划线和连字符
+            safe_name = re.sub(r'[^a-zA-Z0-9\-_]', '', base_name)
+            
+            # 如果处理后的名称为空，使用默认名称
+            if not safe_name:
+                safe_name = "doc"
+            
+            # 确保名称以字母开头
+            if not safe_name[0].isalpha():
+                safe_name = "doc_" + safe_name
+            
+            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+            collection_name = f"{safe_name}_{timestamp}"
+            
+            # 确保集合名称长度不超过63个字符
+            if len(collection_name) > 63:
+                collection_name = collection_name[:59] + timestamp[-4:]
+
+            logger.info(f"Creating collection with name: {collection_name}")
+
+            # 检查并打印第一个嵌入向量的信息
+            first_emb = embeddings_data["embeddings"][0]
+            logger.info(f"First embedding type: {type(first_emb['embedding'])}")
+            logger.info(f"First embedding sample: {str(first_emb['embedding'][:5])}")
+            logger.info(f"First embedding metadata: {first_emb['metadata']}")
+
+            # 获取向量维度
+            vector = self._process_single_embedding(first_emb)
+            vector_dim = len(vector)
+            logger.info(f"Vector dimension: {vector_dim}")
+
+            # 创建新集合，指定维度
+            try:
+                collection = self.chroma_client.create_collection(
+                    name=collection_name,
+                    embedding_function=None,  # 使用原始向量
+                    metadata={"dimension": vector_dim}
+                )
+                logger.info("Collection created successfully")
+            except Exception as e:
+                logger.exception("Failed to create collection")
+                raise
+
+            # 分批处理数据
+            batch_size = 100
+            total_processed = 0
+
+            try:
+                for i in range(0, len(embeddings_data["embeddings"]), batch_size):
+                    batch = embeddings_data["embeddings"][i:i + batch_size]
+                    
+                    # 准备批次数据
+                    batch_ids = [str(i + idx) for idx in range(len(batch))]
+                    batch_embeddings = [self._process_single_embedding(emb) for emb in batch]
+                    batch_metadatas = [{
+                        "document_name": str(embeddings_data.get("filename", "")),
+                        "chunk_id": str(emb["metadata"].get("chunk_id", 0)),
+                        "content": str(emb["metadata"].get("content", ""))[:500]  # 限制内容长度
+                    } for emb in batch]
+                    batch_documents = [str(emb["metadata"].get("content", ""))[:500] for emb in batch]  # 限制内容长度
+
+                    # 添加批次数据
+                    collection.add(
+                        ids=batch_ids,
+                        embeddings=batch_embeddings,
+                        metadatas=batch_metadatas,
+                        documents=batch_documents
+                    )
+                    
+                    total_processed += len(batch)
+                    logger.info(f"Processed {total_processed}/{len(embeddings_data['embeddings'])} vectors")
+
+                return {
+                    "index_size": total_processed,
+                    "collection_name": collection_name
+                }
+
+            except Exception as e:
+                logger.exception("Error processing vectors")
+                logger.error(f"Last batch info - size: {len(batch_embeddings)}, vector_dim: {len(batch_embeddings[0])}")
+                raise
+
+        except Exception as e:
+            logger.exception("Error in _index_to_chroma")
+            raise RuntimeError(f"Failed to index to Chroma: {str(e)}")
+
+    def _process_single_embedding(self, emb: Dict) -> List[float]:
+        """
+        处理单个嵌入向量，确保返回浮点数列表
+        """
+        try:
+            embedding = emb.get("embedding")
+            if embedding is None:
+                raise ValueError("Missing 'embedding' key in vector data")
+
+            if isinstance(embedding, list):
+                return [float(x) for x in embedding]
+            elif isinstance(embedding, str):
+                try:
+                    vector = json.loads(embedding)
+                    return [float(x) for x in vector]
+                except json.JSONDecodeError:
+                    vector = [float(x) for x in embedding.split()]
+                    return vector
+            else:
+                raise ValueError(f"Unsupported embedding type: {type(embedding)}")
+        except Exception as e:
+            logger.exception(f"Error processing embedding")
+            logger.error(f"Embedding data: {emb}")
+            raise
+
+    def list_collections(self, provider: str) -> List[Dict[str, Any]]:
         """
         列出指定提供商的所有集合
-        
-        参数:
-            provider: 向量数据库提供商
-            
-        返回:
-            集合名称列表
         """
-        if provider == VectorDBProvider.MILVUS:
-            try:
-                connections.connect(alias="default", uri=MILVUS_CONFIG["uri"])
-                collections = utility.list_collections()
-                return collections
-            finally:
-                connections.disconnect("default")
-        return []
+        try:
+            logger.info(f"Listing collections for provider: {provider}")
+            
+            if provider.lower() == "chroma":
+                if self.chroma_client is None:
+                    logger.error("Chroma client not initialized")
+                    return []
+                
+                try:
+                    collections = self.chroma_client.list_collections()
+                    logger.info(f"Found {len(collections)} collections in Chroma")
+                    
+                    # 返回格式化的集合列表
+                    result = [
+                        {
+                            "id": collection.name,
+                            "name": collection.name,
+                            "count": collection.count()
+                        }
+                        for collection in collections
+                    ]
+                    logger.info(f"Formatted Chroma collections: {result}")
+                    return result
+                    
+                except Exception as e:
+                    logger.error(f"Error getting Chroma collections: {str(e)}")
+                    return []
+                    
+            elif provider.lower() == "milvus":
+                # Windows 系统下不支持 Milvus
+                if sys.platform.startswith('win'):
+                    logger.warning("Milvus is not supported on Windows")
+                    return []
+                    
+                try:
+                    from pymilvus import connections, utility, Collection
+                    connections.connect(alias="default", uri=MILVUS_CONFIG["uri"])
+                    collections = utility.list_collections()
+                    return [{"id": name, "name": name, "count": Collection(name).num_entities} for name in collections]
+                except ImportError:
+                    logger.warning("Milvus is not installed")
+                    return []
+                except Exception as e:
+                    logger.error(f"Error getting Milvus collections: {str(e)}")
+                    return []
+                finally:
+                    try:
+                        connections.disconnect("default")
+                    except:
+                        pass
+                    
+            logger.warning(f"Unsupported provider: {provider}")
+            return []
+            
+        except Exception as e:
+            logger.exception(f"Error listing collections for {provider}")
+            return []
 
     def delete_collection(self, provider: str, collection_name: str) -> bool:
         """
@@ -321,6 +532,13 @@ class VectorStoreService:
                 return True
             finally:
                 connections.disconnect("default")
+        elif provider == VectorDBProvider.CHROMA:
+            try:
+                self.chroma_client.delete_collection(collection_name)
+                return True
+            except Exception as e:
+                logger.error(f"Error deleting Chroma collection: {str(e)}")
+                return False
         return False
 
     def get_collection_info(self, provider: str, collection_name: str) -> Dict[str, Any]:
@@ -345,4 +563,19 @@ class VectorStoreService:
                 }
             finally:
                 connections.disconnect("default")
+        elif provider == VectorDBProvider.CHROMA:
+            try:
+                collection = self.chroma_client.get_collection(collection_name)
+                return {
+                    "name": collection_name,
+                    "num_entities": collection.count(),
+                    "schema": {
+                        "fields": [
+                            {"name": "vector", "index_params": {"index_type": "hnsw"}}
+                        ]
+                    }
+                }
+            except Exception as e:
+                logger.error(f"Error getting Chroma collection info: {str(e)}")
+                return {}
         return {}
