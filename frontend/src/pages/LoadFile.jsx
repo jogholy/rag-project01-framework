@@ -5,6 +5,7 @@ import { apiBaseUrl } from '../config/config';
 
 const LoadFile = () => {
   const [file, setFile] = useState(null);
+  const [loadingType, setLoadingType] = useState('pdf');
   const [loadingMethod, setLoadingMethod] = useState('pymupdf');
   const [unstructuredStrategy, setUnstructuredStrategy] = useState('fast');
   const [chunkingStrategy, setChunkingStrategy] = useState('basic');
@@ -21,6 +22,66 @@ const LoadFile = () => {
   const [documents, setDocuments] = useState([]);
   const [activeTab, setActiveTab] = useState('preview'); // 'preview' 或 'documents'
   const [selectedDoc, setSelectedDoc] = useState(null);
+
+  // 根据loadingType获取可用的loadingMethod选项
+  const getLoadingMethodOptions = () => {
+    switch (loadingType) {
+      case 'simple_text':
+        return [
+          { value: 'textloader', label: 'TextLoader' }
+        ];
+      case 'structured_text':
+        return [
+          { value: 'jsonloader', label: 'JSONLoader' },
+          { value: 'webbaseloader', label: 'WebBaseLoader' },
+          { value: 'markdownloader', label: 'MarkdownLoader' }
+        ];
+      case 'image':
+        return [
+          { value: 'imageloader', label: 'ImageLoader' },
+          { value: 'pptloader', label: 'PPTLoader' }
+        ];
+      case 'pdf':
+        return [
+          { value: 'pymupdf', label: 'PyMuPDF' },
+          { value: 'pypdf', label: 'PyPDF' },
+          { value: 'unstructured', label: 'Unstructured' }
+        ];
+      case 'table':
+        return [
+          { value: 'csvloader', label: 'CSVLoader' },
+          { value: 'databaseloader', label: 'DatabaseLoader' }
+        ];
+      default:
+        return [];
+    }
+  };
+
+  // 根据loadingType获取可接受的文件类型
+  const getAcceptedFileTypes = () => {
+    switch (loadingType) {
+      case 'simple_text':
+        return '.txt';
+      case 'structured_text':
+        return '.json,.html,.md';
+      case 'image':
+        return '.jpg,.ppt';
+      case 'pdf':
+        return '.pdf';
+      case 'table':
+        return '.csv,.db';
+      default:
+        return '';
+    }
+  };
+
+  // 当loadingType改变时，重置loadingMethod为第一个可用选项
+  useEffect(() => {
+    const options = getLoadingMethodOptions();
+    if (options.length > 0) {
+      setLoadingMethod(options[0].value);
+    }
+  }, [loadingType]);
 
   useEffect(() => {
     fetchDocuments();
@@ -48,6 +109,7 @@ const LoadFile = () => {
     try {
       const formData = new FormData();
       formData.append('file', file);
+      formData.append('loading_type', loadingType);
       formData.append('loading_method', loadingMethod);
       
       if (loadingMethod === 'unstructured') {
@@ -236,10 +298,25 @@ const LoadFile = () => {
         <div className="col-span-3 space-y-4">
           <div className="p-4 border rounded-lg bg-white shadow-sm">
             <div>
-              <label className="block text-sm font-medium mb-1">Upload PDF</label>
+              <label className="block text-sm font-medium mb-1">Loading Type</label>
+              <select
+                value={loadingType}
+                onChange={(e) => setLoadingType(e.target.value)}
+                className="block w-full p-2 border rounded"
+              >
+                <option value="simple_text">简单文本</option>
+                <option value="structured_text">结构化文本</option>
+                <option value="image">图片</option>
+                <option value="pdf">PDF</option>
+                <option value="table">表格</option>
+              </select>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium mb-1">Upload File</label>
               <input
                 type="file"
-                accept=".pdf"
+                accept={getAcceptedFileTypes()}
                 onChange={(e) => setFile(e.target.files[0])}
                 className="block w-full border rounded px-3 py-2"
               />
@@ -252,9 +329,11 @@ const LoadFile = () => {
                 onChange={(e) => setLoadingMethod(e.target.value)}
                 className="block w-full p-2 border rounded"
               >
-                <option value="pymupdf">PyMuPDF</option>
-                <option value="pypdf">PyPDF</option>
-                <option value="unstructured">Unstructured</option>
+                {getLoadingMethodOptions().map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
 

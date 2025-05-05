@@ -1,0 +1,21 @@
+{
+  "query": "DeepSeek是如何实现推理的，原理是什么样的？",
+  "collection_id": "DeepSeek_R1_openai_20250411150850",
+  "timestamp": "2025-05-03T11:20:38.732344",
+  "results": [
+    {
+      "text": ". . . . . . . . . . . 2.2.4 Performance, Self-evolution Process and Aha Moment of DeepSeek-R1-Zero 6 . . . . . . . . . . . . . . . 2.3.1 Cold Start . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 2.3.2 Reasoning-oriented Reinforcement Learning . . . . . . . . . . . . . . . . . 2.3.3 Rejection Sampling and Supervised Fine-Tuning . . . . . . . . . . . . . . . 2.3.4 Reinforcement Learning for all Scenarios . . . . . . . . . . . . . . . . . . . 2.4 Distillation: Empower",
+      "score": 0.4581376612186432,
+      "metadata": {
+        "source": "DeepSeek_R1.pdf",
+        "page": "2",
+        "chunk": 6,
+        "total_chunks": 180,
+        "page_range": "2",
+        "embedding_provider": "openai",
+        "embedding_model": "text-embedding-3-small",
+        "embedding_timestamp": "2025-02-14T16:48:02.418296"
+      }
+    }
+  ]
+}

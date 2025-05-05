@@ -1,0 +1,11 @@
+{
+  "filename": "black_myth_wukong.txt",
+  "total_chunks": 0,
+  "total_pages": 0,
+  "loading_method": "textloader",
+  "loading_strategy": null,
+  "chunking_strategy": null,
+  "chunking_method": "loaded",
+  "timestamp": "2025-05-05T21:06:49.739951",
+  "chunks": []
+}

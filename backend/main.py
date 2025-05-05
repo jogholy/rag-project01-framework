@@ -24,10 +24,13 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# 确保必要的目录存在
-os.makedirs("temp", exist_ok=True)
-os.makedirs("01-chunked-docs", exist_ok=True)
-os.makedirs("02-embedded-docs", exist_ok=True)
+@app.on_event("startup")
+async def startup_event():
+    # 创建必要的目录
+    directories = ["01-loaded-docs", "01-chunked-docs", "02-embedded-docs"]
+    for directory in directories:
+        os.makedirs(directory, exist_ok=True)
+        logger.info(f"Created directory: {directory}")
 
 # Configure CORS
 app.add_middleware(
@@ -387,20 +390,28 @@ async def get_documents(type: str = Query("all")):
                 for filename in os.listdir(loaded_dir):
                     if filename.endswith('.json'):
                         file_path = os.path.join(loaded_dir, filename)
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            doc_data = json.load(f)
-                            documents.append({
-                                "id": filename,
-                                "name": filename,
-                                "type": "loaded",
-                                "metadata": {
-                                    "total_pages": doc_data.get("total_pages"),
-                                    "total_chunks": doc_data.get("total_chunks"),
-                                    "loading_method": doc_data.get("loading_method"),
-                                    "chunking_method": doc_data.get("chunking_method"),
-                                    "timestamp": doc_data.get("timestamp")
-                                }
-                            })
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                doc_data = json.load(f)
+                                if isinstance(doc_data, dict):  # 确保数据是字典类型
+                                    documents.append({
+                                        "id": filename,
+                                        "name": filename,
+                                        "type": "loaded",
+                                        "metadata": {
+                                            "total_pages": doc_data.get("total_pages", 1),
+                                            "total_chunks": doc_data.get("total_chunks", 0),
+                                            "loading_method": doc_data.get("loading_method", "unknown"),
+                                            "chunking_method": doc_data.get("chunking_method", "unknown"),
+                                            "timestamp": doc_data.get("timestamp", "")
+                                        }
+                                    })
+                        except json.JSONDecodeError:
+                            logger.error(f"Invalid JSON in file: {file_path}")
+                            continue
+                        except Exception as e:
+                            logger.error(f"Error reading file {file_path}: {str(e)}")
+                            continue
 
         # 读取chunked文档
         if type in ["all", "chunked"]:
@@ -409,13 +420,27 @@ async def get_documents(type: str = Query("all")):
                 for filename in os.listdir(chunked_dir):
                     if filename.endswith('.json'):
                         file_path = os.path.join(chunked_dir, filename)
-                        with open(file_path, 'r', encoding='utf-8') as f:
-                            doc_data = json.load(f)
-                            documents.append({
-                                "id": filename,
-                                "name": filename,  # 保持原始文件名
-                                "type": "chunked"
-                            })
+                        try:
+                            with open(file_path, 'r', encoding='utf-8') as f:
+                                doc_data = json.load(f)
+                                if isinstance(doc_data, dict):  # 确保数据是字典类型
+                                    documents.append({
+                                        "id": filename,
+                                        "name": filename,
+                                        "type": "chunked",
+                                        "metadata": {
+                                            "total_pages": doc_data.get("total_pages", 1),
+                                            "total_chunks": doc_data.get("total_chunks", 0),
+                                            "chunking_method": doc_data.get("chunking_method", "unknown"),
+                                            "timestamp": doc_data.get("timestamp", "")
+                                        }
+                                    })
+                        except json.JSONDecodeError:
+                            logger.error(f"Invalid JSON in file: {file_path}")
+                            continue
+                        except Exception as e:
+                            logger.error(f"Error reading file {file_path}: {str(e)}")
+                            continue
         
         return {"documents": documents}
     except Exception as e:
@@ -588,6 +613,7 @@ async def parse_file(
 @app.post("/load")
 async def load_file(
     file: UploadFile = File(...),
+    loading_type: str = Form(...),
     loading_method: str = Form(...),
     strategy: str = Form(None),
     chunking_strategy: str = Form(None),
@@ -600,62 +626,91 @@ async def load_file(
             content = await file.read()
             buffer.write(content)
         
-        # 准备元数据
-        metadata = {
-            "filename": file.filename,
-            "total_chunks": 0,  # 将在后面更新
-            "total_pages": 0,   # 将在后面更新
-            "loading_method": loading_method,
-            "loading_strategy": strategy,  
-            "chunking_strategy": chunking_strategy, 
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        # Parse chunking options if provided
-        chunking_options_dict = None
-        if chunking_options:
-            chunking_options_dict = json.loads(chunking_options)
-        
         # 使用 LoadingService 加载文档
         loading_service = LoadingService()
-        raw_text = loading_service.load_pdf(
-            temp_path, 
-            loading_method, 
-            strategy=strategy,
-            chunking_strategy=chunking_strategy,
-            chunking_options=chunking_options_dict
-        )
         
-        metadata["total_pages"] = loading_service.get_total_pages()
-        
-        page_map = loading_service.get_page_map()
-        
-        # 转换成标准化的chunks格式
-        chunks = []
-        for idx, page in enumerate(page_map, 1):
-            chunk_metadata = {
-                "chunk_id": idx,
-                "page_number": page["page"],
-                "page_range": str(page["page"]),
-                "word_count": len(page["text"].split())
-            }
-            if "metadata" in page:
-                chunk_metadata.update(page["metadata"])
+        if loading_type == 'simple_text':
+            # 处理简单文本文件
+            document_data = loading_service._load_simple_text(temp_path, loading_method)
             
-            chunks.append({
-                "content": page["text"],
-                "metadata": chunk_metadata
-            })
-        
-        # 使用 LoadingService 保存文档，传递strategy参数
-        filepath = loading_service.save_document(
-            filename=file.filename,
-            chunks=chunks,
-            metadata=metadata,
-            loading_method=loading_method,
-            strategy=strategy,
-            chunking_strategy=chunking_strategy,
-        )
+            # print(document_data)
+            # 保存文档
+            filepath = loading_service.save_document(
+                filename=file.filename,
+                content=document_data,
+                loading_method=loading_method
+            )
+            
+        else:
+            # 处理PDF文件
+            # 准备元数据
+            metadata = {
+                "filename": file.filename,
+                "total_chunks": 0,  # 将在后面更新
+                "total_pages": 0,   # 将在后面更新
+                "loading_type": loading_type,
+                "loading_method": loading_method,
+                "loading_strategy": strategy,  
+                "chunking_strategy": chunking_strategy, 
+                "timestamp": datetime.now().isoformat()
+            }
+            
+            # Parse chunking options if provided
+            chunking_options_dict = None
+            if chunking_options:
+                chunking_options_dict = json.loads(chunking_options)
+            
+            raw_text = loading_service.load_file(
+                temp_path, 
+                loading_type,
+                loading_method,
+                strategy=strategy,
+                chunking_strategy=chunking_strategy,
+                chunking_options=chunking_options_dict
+            )
+            
+            metadata["total_pages"] = loading_service.get_total_pages()
+            
+            page_map = loading_service.get_page_map()
+            
+            # 转换成标准化的chunks格式
+            chunks = []
+            for idx, page in enumerate(page_map, 1):
+                chunk_metadata = {
+                    "chunk_id": idx,
+                    "page_number": page["page"],
+                    "page_range": str(page["page"]),
+                    "word_count": len(page["text"].split())
+                }
+                if "metadata" in page:
+                    chunk_metadata.update(page["metadata"])
+                
+                chunks.append({
+                    "content": page["text"],
+                    "metadata": chunk_metadata
+                })
+            
+            # 构建文档数据
+            document_data = {
+                "filename": str(file.filename),
+                "total_chunks": int(len(chunks)),
+                "total_pages": int(metadata.get("total_pages", 1)),
+                "loading_method": str(loading_method),
+                "loading_strategy": str(strategy) if loading_method == "unstructured" and strategy else None,
+                "chunking_strategy": str(chunking_strategy) if loading_method == "unstructured" and chunking_strategy else None,
+                "chunking_method": "loaded",
+                "timestamp": datetime.now().isoformat(),
+                "chunks": chunks
+            }
+            
+            # 保存文档
+            filepath = loading_service.save_document(
+                filename=file.filename,
+                content=document_data,
+                loading_method=loading_method,
+                strategy=strategy,
+                chunking_strategy=chunking_strategy
+            )
         
         # 读取保存的文档以返回
         with open(filepath, "r", encoding="utf-8") as f:
@@ -663,6 +718,16 @@ async def load_file(
         
         # 清理临时文件
         os.remove(temp_path)
+
+        # 添加数据格式验证
+        if not isinstance(document_data, dict):
+            raise ValueError("Invalid document data format")
+            
+        required_fields = ["filename", "total_chunks", "total_pages", "loading_method", 
+                         "chunking_method", "timestamp", "chunks"]
+        for field in required_fields:
+            if field not in document_data:
+                raise ValueError(f"Missing required field: {field}")
         
         return {"loaded_content": document_data, "filepath": filepath}
     except Exception as e:

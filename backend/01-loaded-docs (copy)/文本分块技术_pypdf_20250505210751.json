@@ -1,0 +1,246 @@
+{
+  "filename": "文本分块技术.pdf",
+  "total_chunks": 26,
+  "total_pages": 28,
+  "loading_method": "pypdf",
+  "loading_strategy": null,
+  "chunking_strategy": null,
+  "chunking_method": "loaded",
+  "timestamp": "2025-05-05T21:07:51.359461",
+  "chunks": [
+    {
+      "content": "黄佳新加坡科研局资深AI工程师大模型RAG进阶实战营–组件篇2 –文本切块技术",
+      "metadata": {
+        "chunk_id": 1,
+        "page_number": 1,
+        "page_range": "1",
+        "word_count": 2
+      }
+    },
+    {
+      "content": "Copyright 黄佳@咖哥AI极客时间RAG训练营",
+      "metadata": {
+        "chunk_id": 2,
+        "page_number": 2,
+        "page_range": "2",
+        "word_count": 2
+      }
+    },
+    {
+      "content": "黄佳AI研究员《动手做AI Agent》《GPT图解》作者AI研究员、技术作家，主攻方向为大语言模型的开发和应用实践、AIinFinTech、AIinMedTech、持续学习，代表作主要有《大模型应用开发动手做AIAgent》《GPT图解》《零基础学机器学习》《数据分析咖哥十话》《SAP程序设计》《LangChain实战课》等，曾在埃森哲新加坡公司担任多年SAP技术顾问，负责政府和企业薪酬系统的实施和运维。",
+      "metadata": {
+        "chunk_id": 3,
+        "page_number": 5,
+        "page_range": "5",
+        "word_count": 2
+      }
+    },
+    {
+      "content": "目录\n1. 文本分块的原理和重要性2. 文本分块的方法和实现3. 与分块相关的高级索引技巧",
+      "metadata": {
+        "chunk_id": 4,
+        "page_number": 6,
+        "page_range": "6",
+        "word_count": 5
+      }
+    },
+    {
+      "content": "文本分块的原理和重要性",
+      "metadata": {
+        "chunk_id": 5,
+        "page_number": 7,
+        "page_range": "7",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "为什么要分块将长文本分解成适当大小的片段，以便于嵌入、索引和存储，并提高检索的精确度。",
+      "metadata": {
+        "chunk_id": 6,
+        "page_number": 8,
+        "page_range": "8",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "如何确定大模型所能接受的最长上下文",
+      "metadata": {
+        "chunk_id": 7,
+        "page_number": 9,
+        "page_range": "9",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "分块大小对检索精度的影响–理解嵌入过程",
+      "metadata": {
+        "chunk_id": 8,
+        "page_number": 10,
+        "page_range": "10",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "分块大小对生成质量的影响-lost in the middle通过应用合理的分块策略，将知识库中的内容切分为主题明确的小块，如“高血压：常用药物”“高血压：用药禁忌”“高血压：生活方式建议”。每块保持在500个字符左右，可以使检索过程更精准地捕捉每个主题的核心信息，并仅将该信息传递给生成模型，从而生成精准的回答，例如“常用的降压药包括药物A和药物B，需要在医生指导下服用”。",
+      "metadata": {
+        "chunk_id": 9,
+        "page_number": 11,
+        "page_range": "11",
+        "word_count": 4
+      }
+    },
+    {
+      "content": "分块与主题稀释假设山西文旅建立了一个包含各地景点和活动的知识库。如果一个文本块包含了关于“五台山、云冈石窟、太原游乐场”的描述，当用户询问“适合带小朋友玩的景点”时，这个综合信息块可能不会得到很高的检索评分。然而，如果每个景点的信息被独立为块，例如“五台山：佛教名山”“云冈石窟：唐代造像巅峰”“太原游乐场：暑期攻略”，那么RAG系统就能更准确定位到相关信息，避免了无关内容对相似度检索过程的稀释。",
+      "metadata": {
+        "chunk_id": 10,
+        "page_number": 12,
+        "page_range": "12",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "用ChunkViz工具可视化分块",
+      "metadata": {
+        "chunk_id": 11,
+        "page_number": 13,
+        "page_range": "13",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "文本分块的方法和实现",
+      "metadata": {
+        "chunk_id": 12,
+        "page_number": 14,
+        "page_range": "14",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "CharacterTextSplitter-按固定字符数分块from langchain_community.document_loadersimport TextLoaderfrom langchain_text_splittersimport CharacterTextSplitterloader = TextLoader(\"data/山西文旅/云岗石窟.txt\")documents = loader.load()# 设置分块器，指定块的大小为1000个字符，无重叠text_splitter= CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)chunks = text_splitter.split_documents(documents)print(chunks)",
+      "metadata": {
+        "chunk_id": 13,
+        "page_number": 15,
+        "page_range": "15",
+        "word_count": 14
+      }
+    },
+    {
+      "content": "RecursiveCharacterTextSplitter–递归分块from langchain_text_splittersimport RecursiveCharacterTextSplittertext = \"\"\"云冈石窟位于中国北部山西省大同市西郊17公里处的武周山南麓，石窟依山开凿，东西绵延1公里。存有主要洞窟45个……\"\"\"# 定义分割符列表，按优先级依次使用separators = [\"\\n\\n\", \".\", \"，\", \" \"]# 创建递归分块器，并传入分割符列表text_splitter= RecursiveCharacterTextSplitter(chunk_size=100,chunk_overlap=10,separators=separators)split_texts= text_splitter.split_text(text)print(chunks)",
+      "metadata": {
+        "chunk_id": 14,
+        "page_number": 16,
+        "page_range": "16",
+        "word_count": 15
+      }
+    },
+    {
+      "content": "分块的重要性–块太小",
+      "metadata": {
+        "chunk_id": 15,
+        "page_number": 17,
+        "page_range": "17",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "分块的重要性–块合适",
+      "metadata": {
+        "chunk_id": 16,
+        "page_number": 18,
+        "page_range": "18",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "基于特定格式（如代码）分块RecursiveCharacterTextSplitter.get_separators_for_language(Language.PYTHON)Out['\\nclass', '\\ndef', '\\n\\tdef', '\\n\\n', '\\n', ' ', ‘’]python_splitter= RecursiveCharacterTextSplitter.from_language(language=Language.PYTHON,  # 指定代码语言为Pythonchunk_size=100,chunk_overlap=0)python_docs= python_splitter.create_documents([GAME_CODE])print(python_docs)",
+      "metadata": {
+        "chunk_id": 17,
+        "page_number": 19,
+        "page_range": "19",
+        "word_count": 12
+      }
+    },
+    {
+      "content": "使用Unstructured基于文档结构分块基于对文档语义结构的识别，而非简单地根据空行或换行符来拆分文本。•Basic策略将文本元素顺序合并到同一个分块内，直到达到最大字符数（max_characters）或软限制（new_after_n_chars）。如果单个元素（如一段特别长的正文或一张很大的表格）本身超过了最大字符数，则会对该元素进行二次拆分。表格元素会被视为独立的分块；如果表格过大，也会被拆分为多个TableChunk。可以通过overlap与overlap_all等参数设置分块重叠。•By Title策略在保留Basic策略的基础行为的同时，会在检测到新的标题（Title元素）后立刻关闭当前分块，并开启一个新的分块。可以通过multipage_sections和combine_text_under_n_chars等参数进一步控制如何合并或拆分跨页片段、短小片段等。通过API调用Unstructured时，还有以下两种额外的智能分块策略。lBy Page：确保每页的内容独立分块。lBy Similarity：利用嵌入模型将主题相似的元素组合成块。https://docs.unstructured.io/api-reference/partition/chunking",
+      "metadata": {
+        "chunk_id": 18,
+        "page_number": 20,
+        "page_range": "20",
+        "word_count": 4
+      }
+    },
+    {
+      "content": "作业: 用Unstructured工具给你的PDF文档分块•Basic–主要按照预设大小（表格不算）•By Title –主要按照Title和下面的子元素•By Page –主要按照页面•By Similarity –把相似的元素组织在一起两种方式：•Partition时直接Chunk•先Partition再Chunkhttps://docs.unstructured.io/api-reference/partition/chunking",
+      "metadata": {
+        "chunk_id": 19,
+        "page_number": 21,
+        "page_range": "21",
+        "word_count": 8
+      }
+    },
+    {
+      "content": "用SemanticSplitterNodeParser进行语义分块from llama_index.coreimport SimpleDirectoryReaderfrom llama_index.core.node_parserimport (SemanticSplitterNodeParser,)from llama_index.embeddings.openaiimport OpenAIEmbeddingdocuments = SimpleDirectoryReader(input_files=[\"data/黑神话/黑神话wiki.txt\"]).load_data()embed_model= OpenAIEmbedding()# 创建语义分块器splitter = SemanticSplitterNodeParser(buffer_size=1, # 缓冲区大小breakpoint_percentile_threshold=95, # 断点百分位阈值embed_model=embed_model# 使用的嵌入模型)",
+      "metadata": {
+        "chunk_id": 20,
+        "page_number": 22,
+        "page_range": "22",
+        "word_count": 18
+      }
+    },
+    {
+      "content": "与分块相关的高级索引技巧",
+      "metadata": {
+        "chunk_id": 21,
+        "page_number": 23,
+        "page_range": "23",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "带滑动窗口的句子切分（Sliding Windows）",
+      "metadata": {
+        "chunk_id": 22,
+        "page_number": 24,
+        "page_range": "24",
+        "word_count": 2
+      }
+    },
+    {
+      "content": "分块时混合生成父子文本块（Parent-Child Docs）",
+      "metadata": {
+        "chunk_id": 23,
+        "page_number": 25,
+        "page_range": "25",
+        "word_count": 2
+      }
+    },
+    {
+      "content": "分块时为文本块创建元数据",
+      "metadata": {
+        "chunk_id": 24,
+        "page_number": 26,
+        "page_range": "26",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "在分块时形成有级别的索引（Summary→Details）",
+      "metadata": {
+        "chunk_id": 25,
+        "page_number": 27,
+        "page_range": "27",
+        "word_count": 1
+      }
+    },
+    {
+      "content": "文档→嵌入对象（Document→EmbeddedObjects）",
+      "metadata": {
+        "chunk_id": 26,
+        "page_number": 28,
+        "page_range": "28",
+        "word_count": 1
+      }
+    }
+  ]
+}

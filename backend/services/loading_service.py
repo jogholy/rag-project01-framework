@@ -6,6 +6,11 @@ import logging
 import os
 from datetime import datetime
 import json
+import pandas as pd
+from langchain_community.document_loaders import TextLoader, JSONLoader, WebBaseLoader
+from langchain_community.document_loaders import CSVLoader
+from langchain_community.document_loaders import UnstructuredMarkdownLoader, UnstructuredImageLoader
+from unstructured.partition.ppt import partition_ppt
 
 logger = logging.getLogger(__name__)
 """
@@ -37,7 +42,126 @@ class LoadingService:
         self.total_pages = 0
         self.current_page_map = []
     
-    def load_pdf(self, file_path: str, method: str, strategy: str = None, chunking_strategy: str = None, chunking_options: dict = None) -> str:
+    def load_file(self, file_path: str, loading_type: str, loading_method: str, strategy: str = None, chunking_strategy: str = None, chunking_options: dict = None) -> str:
+        """
+        加载文件的主方法，支持多种文件类型和加载策略。
+
+        参数:
+            file_path (str): 文件路径
+            loading_type (str): 文件类型 ('simple_text', 'structured_text', 'image', 'pdf', 'table')
+            loading_method (str): 加载方法
+            strategy (str, optional): 使用unstructured方法时的策略
+            chunking_strategy (str, optional): 文本分块策略
+            chunking_options (dict, optional): 分块选项配置
+
+        返回:
+            str: 提取的文本内容
+        """
+        try:
+            if loading_type == 'pdf':
+                return self._load_pdf(file_path, loading_method, strategy, chunking_strategy, chunking_options)
+            elif loading_type == 'simple_text':
+                return self._load_simple_text(file_path, loading_method)
+            elif loading_type == 'structured_text':
+                return self._load_structured_text(file_path, loading_method)
+            elif loading_type == 'image':
+                return self._load_image(file_path, loading_method)
+            elif loading_type == 'table':
+                return self._load_table(file_path, loading_method)
+            else:
+                raise ValueError(f"Unsupported loading type: {loading_type}")
+        except Exception as e:
+            logger.error(f"Error loading file with {loading_method}: {str(e)}")
+            raise
+
+    def _load_simple_text(self, file_path: str, loading_method: str) -> dict:
+        """加载简单文本文件，返回标准化的文档格式"""
+        try:
+            if loading_method == 'textloader':
+                loader = TextLoader(file_path)
+                documents = loader.load()
+                content = "\n".join(doc.page_content for doc in documents)
+                
+                # 创建标准化的chunks格式
+                chunks = [{
+                    "content": content,
+                    "metadata": {
+                        "chunk_id": 1,
+                        "page_number": 1,
+                        "page_range": "1",
+                        "word_count": len(content.split())
+                    }
+                }]
+                
+                # 返回标准化的文档格式
+                return {
+                    "filename": os.path.basename(file_path),
+                    "total_chunks": 1,
+                    "total_pages": 1,
+                    "loading_method": loading_method,
+                    "loading_strategy": None,
+                    "chunking_strategy": None,
+                    "chunking_method": "loaded",
+                    "timestamp": datetime.now().isoformat(),
+                    "chunks": chunks
+                }
+            else:
+                raise ValueError(f"Unsupported loading method for simple text: {loading_method}")
+        except Exception as e:
+            logger.error(f"Error loading simple text: {str(e)}")
+            raise
+
+    def _load_structured_text(self, file_path: str, loading_method: str) -> str:
+        """加载结构化文本文件"""
+        try:
+            if loading_method == 'jsonloader':
+                loader = JSONLoader(file_path)
+            elif loading_method == 'webbaseloader':
+                loader = WebBaseLoader(file_path)
+            elif loading_method == 'markdownloader':
+                loader = UnstructuredMarkdownLoader(file_path)
+            else:
+                raise ValueError(f"Unsupported loading method for structured text: {loading_method}")
+            
+            documents = loader.load()
+            return "\n".join(doc.page_content for doc in documents)
+        except Exception as e:
+            logger.error(f"Error loading structured text: {str(e)}")
+            raise
+
+    def _load_image(self, file_path: str, loading_method: str) -> str:
+        """加载图片文件"""
+        try:
+            if loading_method == 'imageloader':
+                loader = UnstructuredImageLoader(file_path)
+            elif loading_method == 'pptloader':
+                loader = partition_ppt(file_path)
+            else:
+                raise ValueError(f"Unsupported loading method for image: {loading_method}")
+            
+            documents = loader.load()
+            return "\n".join(doc.page_content for doc in documents)
+        except Exception as e:
+            logger.error(f"Error loading image: {str(e)}")
+            raise
+
+    def _load_table(self, file_path: str, loading_method: str) -> str:
+        """加载表格文件"""
+        try:
+            if loading_method == 'csvloader':
+                loader = CSVLoader(file_path)
+            elif loading_method == 'databaseloader':
+                pass # loader = DatabaseLoader(file_path)
+            else:
+                raise ValueError(f"Unsupported loading method for table: {loading_method}")
+            
+            documents = loader.load()
+            return "\n".join(doc.page_content for doc in documents)
+        except Exception as e:
+            logger.error(f"Error loading table: {str(e)}")
+            raise
+
+    def _load_pdf(self, file_path: str, method: str, strategy: str = None, chunking_strategy: str = None, chunking_options: dict = None) -> str:
         """
         加载PDF文档的主方法，支持多种加载策略。
 
@@ -66,7 +190,7 @@ class LoadingService:
                     chunking_options=chunking_options
                 )
             else:
-                raise ValueError(f"Unsupported loading method: {method}")
+                raise ValueError(f"Unsupported loading method for PDF: {method}")
         except Exception as e:
             logger.error(f"Error loading PDF with {method}: {str(e)}")
             raise
@@ -266,14 +390,13 @@ class LoadingService:
             logger.error(f"pdfplumber error: {str(e)}")
             raise
     
-    def save_document(self, filename: str, chunks: list, metadata: dict, loading_method: str, strategy: str = None, chunking_strategy: str = None) -> str:
+    def save_document(self, filename: str, content: dict, loading_method: str, strategy: str = None, chunking_strategy: str = None) -> str:
         """
         保存处理后的文档数据。
 
         参数:
-            filename (str): 原PDF文件名
-            chunks (list): 文档分块列表
-            metadata (dict): 文档元数据
+            filename (str): 原文件名
+            content (dict): 文档内容和元数据
             loading_method (str): 使用的加载方法
             strategy (str, optional): 使用的加载策略
             chunking_strategy (str, optional): 使用的分块策略
@@ -283,33 +406,20 @@ class LoadingService:
         """
         try:
             timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
-            base_name = filename.replace('.pdf', '').split('_')[0]
+            base_name = os.path.splitext(filename)[0]
             
-            # Adjust the document name to include strategy if unstructured
+            # 构建文档名称
             if loading_method == "unstructured" and strategy:
                 doc_name = f"{base_name}_{loading_method}_{strategy}_{chunking_strategy}_{timestamp}"
             else:
                 doc_name = f"{base_name}_{loading_method}_{timestamp}"
-            
-            # 构建文档数据结构，确保所有值都是可序列化的
-            document_data = {
-                "filename": str(filename),
-                "total_chunks": int(len(chunks)),
-                "total_pages": int(metadata.get("total_pages", 1)),
-                "loading_method": str(loading_method),
-                "loading_strategy": str(strategy) if loading_method == "unstructured" and strategy else None,
-                "chunking_strategy": str(chunking_strategy) if loading_method == "unstructured" and chunking_strategy else None,
-                "chunking_method": "loaded",
-                "timestamp": datetime.now().isoformat(),
-                "chunks": chunks
-            }
             
             # 保存到文件
             filepath = os.path.join("01-loaded-docs", f"{doc_name}.json")
             os.makedirs("01-loaded-docs", exist_ok=True)
             
             with open(filepath, 'w', encoding='utf-8') as f:
-                json.dump(document_data, f, ensure_ascii=False, indent=2)
+                json.dump(content, f, ensure_ascii=False, indent=2)
                 
             return filepath
             
