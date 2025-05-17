@@ -60,8 +60,8 @@ class LoadingService:
         try:
             if loading_type == 'pdf':
                 return self._load_pdf(file_path, loading_method, strategy, chunking_strategy, chunking_options)
-            elif loading_type == 'simple_text':
-                return self._load_simple_text(file_path, loading_method)
+            # elif loading_type == 'simple_text':
+            #     return self._load_simple_text(file_path, loading_method)
             elif loading_type == 'structured_text':
                 return self._load_structured_text(file_path, loading_method)
             elif loading_type == 'image':
@@ -74,7 +74,7 @@ class LoadingService:
             logger.error(f"Error loading file with {loading_method}: {str(e)}")
             raise
 
-    def _load_simple_text(self, file_path: str, loading_method: str) -> dict:
+    def _load_other_file(self, file_path: str, loading_method: str) -> dict:
         """加载简单文本文件，返回标准化的文档格式"""
         try:
             if loading_method == 'textloader':
