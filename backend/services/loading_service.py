@@ -79,34 +79,39 @@ class LoadingService:
         try:
             if loading_method == 'textloader':
                 loader = TextLoader(file_path)
-                documents = loader.load()
-                content = "\n".join(doc.page_content for doc in documents)
-                
-                # 创建标准化的chunks格式
-                chunks = [{
-                    "content": content,
-                    "metadata": {
-                        "chunk_id": 1,
-                        "page_number": 1,
-                        "page_range": "1",
-                        "word_count": len(content.split())
-                    }
-                }]
-                
-                # 返回标准化的文档格式
-                return {
-                    "filename": os.path.basename(file_path),
-                    "total_chunks": 1,
-                    "total_pages": 1,
-                    "loading_method": loading_method,
-                    "loading_strategy": None,
-                    "chunking_strategy": None,
-                    "chunking_method": "loaded",
-                    "timestamp": datetime.now().isoformat(),
-                    "chunks": chunks
-                }
+            elif loading_method == 'jsonloader':
+                loader = JSONLoader(file_path, 
+                                    jq_schema='.main_characters[] | select(has("abilities")) | "姓名：" + .name + "，角色：" + .role + "，技能：" + (.abilities | join(", "))', 
+                                    text_content=True)
             else:
                 raise ValueError(f"Unsupported loading method for simple text: {loading_method}")
+
+            documents = loader.load()
+            content = "\n".join(doc.page_content for doc in documents)
+            
+            # 创建标准化的chunks格式
+            chunks = [{
+                "content": content,
+                "metadata": {
+                    "chunk_id": 1,
+                    "page_number": 1,
+                    "page_range": "1",
+                    "word_count": len(content.split())
+                }
+            }]
+            
+            # 返回标准化的文档格式
+            return {
+                "filename": os.path.basename(file_path),
+                "total_chunks": 1,
+                "total_pages": 1,
+                "loading_method": loading_method,
+                "loading_strategy": None,
+                "chunking_strategy": None,
+                "chunking_method": "loaded",
+                "timestamp": datetime.now().isoformat(),
+                "chunks": chunks
+            }
         except Exception as e:
             logger.error(f"Error loading simple text: {str(e)}")
             raise
@@ -115,7 +120,9 @@ class LoadingService:
         """加载结构化文本文件"""
         try:
             if loading_method == 'jsonloader':
-                loader = JSONLoader(file_path)
+                loader = JSONLoader(file_path, 
+                                    jq_schema='.main_characters[] | select(has("abilities")) | "姓名：" + .name + "，角色：" + .role + "，技能：" + (.abilities | join(", "))', 
+                                    text_content=True)
             elif loading_method == 'webbaseloader':
                 loader = WebBaseLoader(file_path)
             elif loading_method == 'markdownloader':
@@ -124,7 +131,37 @@ class LoadingService:
                 raise ValueError(f"Unsupported loading method for structured text: {loading_method}")
             
             documents = loader.load()
-            return "\n".join(doc.page_content for doc in documents)
+
+            print(documents)
+            content = "\n".join(doc.page_content for doc in documents)
+                
+            # 创建标准化的chunks格式
+            chunks = [{
+                "content": content,
+                "metadata": {
+                    "chunk_id": 1,
+                    "page_number": 1,
+                    "page_range": "1",
+                    "word_count": len(content.split())
+                }
+            }]
+            
+            print(chunks)
+
+            # 返回标准化的文档格式
+            return {
+                "filename": os.path.basename(file_path),
+                "total_chunks": 1,
+                "total_pages": 1,
+                "loading_method": loading_method,
+                "loading_strategy": None,
+                "chunking_strategy": None,
+                "chunking_method": "loaded",
+                "timestamp": datetime.now().isoformat(),
+                "chunks": chunks
+            }
+                
+            # return "\n".join(doc.page_content for doc in documents)
         except Exception as e:
             logger.error(f"Error loading structured text: {str(e)}")
             raise

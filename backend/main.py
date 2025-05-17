@@ -629,7 +629,7 @@ async def load_file(
         # 使用 LoadingService 加载文档
         loading_service = LoadingService()
         
-        if loading_type == 'simple_text':
+        if loading_type == 'simple_text' or loading_type == 'structured_text':
             # 处理简单文本文件
             document_data = loading_service._load_simple_text(temp_path, loading_method)
             

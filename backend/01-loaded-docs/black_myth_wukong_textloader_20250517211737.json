@@ -1,0 +1,21 @@
+{
+  "filename": "black_myth_wukong.txt",
+  "total_chunks": 1,
+  "total_pages": 1,
+  "loading_method": "textloader",
+  "loading_strategy": null,
+  "chunking_strategy": null,
+  "chunking_method": "loaded",
+  "timestamp": "2025-05-17T21:17:37.520465",
+  "chunks": [
+    {
+      "content": "黑神话：悟空 - 游戏介绍\n\n《黑神话：悟空》是由游戏科学工作室开发的一款动作角色扮演游戏。游戏以中国古典小说《西游记》为背景，讲述了孙悟空的故事。\n\n游戏特色：\n- 独特的中国神话世界观\n- 精美的画面表现\n- 流畅的战斗系统\n- 丰富的剧情内容\n\n游戏背景设定在唐朝，玩家将扮演孙悟空，体验一段充满挑战的冒险之旅。游戏融合了中国传统文化元素，展现了一个独特的东方奇幻世界。 ",
+      "metadata": {
+        "chunk_id": 1,
+        "page_number": 1,
+        "page_range": "1",
+        "word_count": 14
+      }
+    }
+  ]
+}
