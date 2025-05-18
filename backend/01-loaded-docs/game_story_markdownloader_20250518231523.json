@@ -1,0 +1,21 @@
+{
+  "filename": "game_story.md",
+  "total_chunks": 1,
+  "total_pages": 1,
+  "loading_method": "markdownloader",
+  "loading_strategy": null,
+  "chunking_strategy": null,
+  "chunking_method": "loaded",
+  "timestamp": "2025-05-18T23:15:23.630509",
+  "chunks": [
+    {
+      "content": "黑神话：悟空 - 游戏故事\n\n背景设定\n\n《黑神话：悟空》的故事发生在唐朝，一个充满神秘与魔法的时代。游戏以中国古典小说《西游记》为基础，但进行了独特的改编和扩展。\n\n主要剧情\n\n第一章：觉醒\n\n孙悟空从五百年的封印中苏醒\n\n发现世界已经发生了巨大的变化\n\n踏上寻找真相的旅程\n\n第二章：寻找\n\n探索各个神秘地点\n\n遇到各种神话生物\n\n解开古老的谜题\n\n第三章：真相\n\n揭示隐藏的阴谋\n\n面对强大的敌人\n\n做出关键的选择\n\n重要角色\n\n孙悟空\n\n主角\n\n拥有强大的战斗能力\n\n性格叛逆但重情重义\n\n唐僧\n\n重要NPC\n\n掌握关键信息\n\n引导玩家前进\n\n游戏世界\n\n主要地点\n\n花果山\n\n天宫\n\n地府\n\n人间\n\n特色系统\n\n变身系统\n\n法宝收集\n\n技能升级\n\n剧情分支",
+      "metadata": {
+        "chunk_id": 1,
+        "page_number": 1,
+        "page_range": "1",
+        "word_count": 38
+      }
+    }
+  ]
+}

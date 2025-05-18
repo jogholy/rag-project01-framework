@@ -11,6 +11,7 @@ from langchain_community.document_loaders import TextLoader, JSONLoader, WebBase
 from langchain_community.document_loaders import CSVLoader
 from langchain_community.document_loaders import UnstructuredMarkdownLoader, UnstructuredImageLoader
 from unstructured.partition.ppt import partition_ppt
+from langchain_community.document_loaders import UnstructuredHTMLLoader
 
 logger = logging.getLogger(__name__)
 """
@@ -83,10 +84,18 @@ class LoadingService:
                 loader = JSONLoader(file_path, 
                                     jq_schema='.main_characters[] | select(has("abilities")) | "姓名：" + .name + "，角色：" + .role + "，技能：" + (.abilities | join(", "))', 
                                     text_content=True)
+            elif loading_method == 'webbaseloader':
+                # loader = WebBaseLoader(file_path)
+                loader = UnstructuredHTMLLoader(file_path)
+            elif loading_method == 'markdownloader':
+                loader = UnstructuredMarkdownLoader(file_path)
             else:
                 raise ValueError(f"Unsupported loading method for simple text: {loading_method}")
 
             documents = loader.load()
+
+            print(documents)
+
             content = "\n".join(doc.page_content for doc in documents)
             
             # 创建标准化的chunks格式
