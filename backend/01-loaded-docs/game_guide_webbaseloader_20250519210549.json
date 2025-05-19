@@ -1,0 +1,21 @@
+{
+  "filename": "game_guide.html",
+  "total_chunks": 1,
+  "total_pages": 1,
+  "loading_method": "webbaseloader",
+  "loading_strategy": null,
+  "chunking_strategy": null,
+  "chunking_method": "loaded",
+  "timestamp": "2025-05-19T21:05:49.333515",
+  "chunks": [
+    {
+      "content": "黑神话：悟空 - 游戏指南\n\n基础操作\n\n移动：WASD\n\n攻击：鼠标左键\n\n技能：数字键1-4\n\n跳跃：空格键\n\n闪避：Shift\n\n战斗系统\n\n游戏采用连招系统，玩家可以通过不同的按键组合释放各种技能。主要战斗要素包括：\n\n基础攻击\n\n特殊技能\n\n防御反击\n\n变身系统\n\n游戏进度\n\n游戏分为多个章节，每个章节都有独特的故事线和任务。玩家需要：\n\n完成主线任务\n\n探索支线剧情\n\n收集装备和道具\n\n提升角色能力",
+      "metadata": {
+        "chunk_id": 1,
+        "page_number": 1,
+        "page_range": "1",
+        "word_count": 21
+      }
+    }
+  ]
+}

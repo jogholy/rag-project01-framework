@@ -1,0 +1,21 @@
+{
+  "filename": "Black_Myth_Wukong_cover_art.jpg",
+  "total_chunks": 1,
+  "total_pages": 1,
+  "loading_method": "imageloader",
+  "loading_strategy": null,
+  "chunking_strategy": null,
+  "chunking_method": "loaded",
+  "timestamp": "2025-05-19T21:25:26.429889",
+  "chunks": [
+    {
+      "content": "\n\nBLACK MYTH “WUKONG",
+      "metadata": {
+        "chunk_id": 1,
+        "page_number": 1,
+        "page_range": "1",
+        "word_count": 3
+      }
+    }
+  ]
+}

@@ -79,7 +79,7 @@ class LoadingService:
         """加载简单文本文件，返回标准化的文档格式"""
         try:
             if loading_method == 'textloader':
-                loader = TextLoader(file_path)
+                loader = TextLoader(file_path, encoding="utf-8")
             elif loading_method == 'jsonloader':
                 loader = JSONLoader(file_path, 
                                     jq_schema='.main_characters[] | select(has("abilities")) | "姓名：" + .name + "，角色：" + .role + "，技能：" + (.abilities | join(", "))', 
@@ -89,6 +89,10 @@ class LoadingService:
                 loader = UnstructuredHTMLLoader(file_path)
             elif loading_method == 'markdownloader':
                 loader = UnstructuredMarkdownLoader(file_path)
+            elif loading_method == 'imageloader':
+                loader = UnstructuredImageLoader(file_path)
+            elif loading_method == 'pptloader':             #目前PPT还有问题
+                loader = partition_ppt(file_path)
             else:
                 raise ValueError(f"Unsupported loading method for simple text: {loading_method}")
 

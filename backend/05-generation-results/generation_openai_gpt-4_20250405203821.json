@@ -1,0 +1,36 @@
+{
+  "query": "DeepSeek是怎么训练出来的？",
+  "timestamp": "2025-04-05T20:38:21.506942",
+  "provider": "openai",
+  "model": "gpt-4",
+  "response": "DeepSeek是通过强化学习训练出来的。根据提供的信息，DeepSeek-R1-Zero直接将强化学习应用于基础模型，不使用任何监督微调（SFT）数据。而DeepSeek-R1则是从经过数千个长链思维（CoT）示例微调的检查点开始应用强化学习。此外，少量的冷启动数据也被用来进一步提升模型的性能。",
+  "context": [
+    {
+      "text": "AIME 2024\n(Pass@1)Codeforces\n(Percentile)GPQA Diamond\n(Pass@1)MATH-500\n(Pass@1)MMLU\n(Pass@1)SWE-bench Verified\n(Resolved)020406080100\nAccuracy / Percentile (%)79.896.3\n71.597.3\n90.8\n49.279.296.6\n75.796.4\n91.8\n48.972.690.6\n62.194.3\n87.4\n36.863.693.4\n60.090.0\n85.2\n41.6\n39.258.7 59.190.2\n88.5\n42.0DeepSeek-R1 OpenAI-o1-1217 DeepSeek-R1-32B OpenAI-o1-mini DeepSeek-V3DeepSeek-R1 ：通过强化学习激励 LLMs 中的推理能力\n深度探索人 工 智 能\nresearch@deepseek.com\n摘要\n我们推出了第一代推理模型， DeepSeek-R1-Zero 和 DeepSeek-R1 。DeepSeek-R1-Zero 是一",
+      "metadata": {
+        "chunk_id": "1",
+        "content": "AIME 2024\n(Pass@1)Codeforces\n(Percentile)GPQA Diamond\n(Pass@1)MATH-500\n(Pass@1)MMLU\n(Pass@1)SWE-bench Verified\n(Resolved)020406080100\nAccuracy / Percentile (%)79.896.3\n71.597.3\n90.8\n49.279.296.6\n75.796.4\n91.8\n48.972.690.6\n62.194.3\n87.4\n36.863.693.4\n60.090.0\n85.2\n41.6\n39.258.7 59.190.2\n88.5\n42.0DeepSeek-R1 OpenAI-o1-1217 DeepSeek-R1-32B OpenAI-o1-mini DeepSeek-V3DeepSeek-R1 ：通过强化学习激励 LLMs 中的推理能力\n深度探索人 工 智 能\nresearch@deepseek.com\n摘要\n我们推出了第一代推理模型， DeepSeek-R1-Zero 和 DeepSeek-R1 。DeepSeek-R1-Zero 是一",
+        "document_name": "DeepSeek-R1-技术报告中文版.pdf"
+      },
+      "score": 0.597802344942321
+    },
+    {
+      "text": "• 其他方面： DeepSeek-R1 在多种任务中也表现出色，包括创意写作、通用问答、编辑、摘\n要等。它在  AlpacaEval 2.0 上实现了  87.6% 的长度控制胜率，在  Are-naHard 上实现了  92.3\n% 的胜率，展示了其智能处理非应试查询的强大能力。此外， DeepSeek-R1 在需要长上下\n文理解的任务上表现出色，在长上下文基准测试中显著优于  DeepSeek-V3 。\n2. 方法\n2.1. 概述\n先前的工作严重依赖大量监督数据来提升模型性能。在本研究中，我们证明了即使不使用监督\n微调（SFT ）作为冷启动，通过大规模强化学习（ RL ）也能显著提升推理能力。此外，加入少\n量冷启动数据可以进一步提升性能。在接下来的章节中，我们将介绍：（ 1 ）DeepSeek-R1-Zero\n，它直接将 RL 应用于基础模型，不使用任何 SFT 数据；（ 2 ）DeepSeek-R1 ，它从经过数千个长\n链思维（ CoT ）示例微调的检查点开始应用 RL ；（3 ）将DeepSeek-R1 的推理能力蒸馏到小型密\n集模型中。\n2.2. DeepSeek-R1-Ze",
+      "metadata": {
+        "chunk_id": "5",
+        "content": "• 其他方面： DeepSeek-R1 在多种任务中也表现出色，包括创意写作、通用问答、编辑、摘\n要等。它在  AlpacaEval 2.0 上实现了  87.6% 的长度控制胜率，在  Are-naHard 上实现了  92.3\n% 的胜率，展示了其智能处理非应试查询的强大能力。此外， DeepSeek-R1 在需要长上下\n文理解的任务上表现出色，在长上下文基准测试中显著优于  DeepSeek-V3 。\n2. 方法\n2.1. 概述\n先前的工作严重依赖大量监督数据来提升模型性能。在本研究中，我们证明了即使不使用监督\n微调（SFT ）作为冷启动，通过大规模强化学习（ RL ）也能显著提升推理能力。此外，加入少\n量冷启动数据可以进一步提升性能。在接下来的章节中，我们将介绍：（ 1 ）DeepSeek-R1-Zero\n，它直接将 RL 应用于基础模型，不使用任何 SFT 数据；（ 2 ）DeepSeek-R1 ，它从经过数千个长\n链思维（ CoT ）示例微调的检查点开始应用 RL ；（3 ）将DeepSeek-R1 的推理能力蒸馏到小型密\n集模型中。\n2.2. DeepSeek-R1-Ze",
+        "document_name": "DeepSeek-R1-技术报告中文版.pdf"
+      },
+      "score": 0.5551384837202167
+    },
+    {
+      "text": "目录\n1 引言 3\n1.1 贡献 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4  \u00001.2 评估结果总结  . . . . . . . . . . . . . . . . \n. . . . . . . . . . . . . 4\n2 方法 5\n2.1 概述 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5  \u00002.2 DeepSeek-R1-Zero ：基础模型\n上的强化学习  . . . . . . . . . . . . . . . . . . . . . . . 5\n2.2.1 强化学习算法  . . . . . . . . . . . . . . . . . . . . . . 5 2.2.2 奖励建模  . . . . . . . . . . . . . . . . . . . . . . \n. . . . . . . . . . 6 2.2.",
+      "metadata": {
+        "chunk_id": "2",
+        "content": "目录\n1 引言 3\n1.1 贡献 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 4  \u00001.2 评估结果总结  . . . . . . . . . . . . . . . . \n. . . . . . . . . . . . . 4\n2 方法 5\n2.1 概述 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . 5  \u00002.2 DeepSeek-R1-Zero ：基础模型\n上的强化学习  . . . . . . . . . . . . . . . . . . . . . . . 5\n2.2.1 强化学习算法  . . . . . . . . . . . . . . . . . . . . . . 5 2.2.2 奖励建模  . . . . . . . . . . . . . . . . . . . . . . \n. . . . . . . . . . 6 2.2.",
+        "document_name": "DeepSeek-R1-技术报告中文版.pdf"
+      },
+      "score": 0.5133275152860794
+    }
+  ]
+}
